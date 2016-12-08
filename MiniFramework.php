@@ -84,7 +84,7 @@ class MiniFramework
         spl_autoload_register(function ($class) {
             if ($class === 'Controller') {
                 require __DIR__.'/Controller.php';
-            } else {
+            } elseif ('Controller' === substr($class, -10)) {
                 $fileName = $this->appPath . '/controllers/' . $class . '.php';
                 if (file_exists($fileName)) {
                     include $fileName;
@@ -107,8 +107,8 @@ class MiniFramework
     {
         $Controller = $this->getController();
         $action = $this->getActionName();
-        $Controller->beforeAction();
         $Controller->actionName = substr($action, 6);
+        $Controller->beforeAction();
         $Controller->appPath = $this->appPath;
         $Controller->$action();
     }

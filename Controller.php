@@ -125,9 +125,10 @@ class Controller
 
     /**
      * DB handler
+     * @param boolean $persistent default false, work only first time
      * @return PDO
      */
-    private function dbHandler()
+    private function dbHandler($persistent = false)
     {
         static $db;
         if (!$db) {
@@ -140,14 +141,21 @@ class Controller
             }
 
             try {
+                if (!array_key_exists('port', $this->config['db'])) {
+                    $this->config['db']['port'] = '3306';
+                }
+                $attrs = [PDO::ATTR_CASE => PDO::CASE_NATURAL];
+                if ($persistent) {
+                    $attrs[PDO::ATTR_PERSISTENT] = true;
+                }
                 $db = new PDO("mysql:host={$this->config['db']['host']};"
                     . "port={$this->config['db']['port']};"
                     . "dbname={$this->config['db']['name']};"
                     . 'charset=utf8;', $this->config['db']['user'], $this->config['db']['pass']
-                    , array(PDO::ATTR_PERSISTENT => true));
+                    , $attrs);
 
                 if (!$db) {
-                    $this->error('数据库连接失败:' . json_encode($this->config['db']));
+                    $this->error('数据库连接失败:' . json_encode($this->config['db'], JSON_UNESCAPED_UNICODE));
                 }
 
                 $stmt = $db->prepare("SET names utf8");
@@ -158,6 +166,47 @@ class Controller
         }
 
         return $db;
+    }
+
+    /**
+     * Redis handler
+     * @param boolean $persistent default false, work only first time
+     * @return Redis
+     * @throws MiniFrameworkException
+     */
+    protected function redisHandler($persistent = false)
+    {
+        static $redis;
+        if (!$redis) {
+            if (!is_array($this->config) || !array_key_exists('redis', $this->config)
+                || !is_array($this->config['redis']) || !array_key_exists('host', $this->config['redis'])
+                || !$this->config['redis']['host']
+            ) {
+                $this->error('无效的redis配置');
+            }
+
+            try {
+                if (!array_key_exists('port', $this->config['redis'])) {
+                    $this->config['redis']['port'] = '6379';
+                }
+
+                $redis = new Redis();
+                if ($persistent) {
+                    $redis->pconnect($this->config['redis']['host'], $this->config['redis']['port']);
+                } else {
+                    $redis->connect($this->config['redis']['host'], $this->config['redis']['port'], 3);
+                }
+
+                if (!$redis) {
+                    $this->error('redis连接失败:' . json_encode($this->config['redis'], JSON_UNESCAPED_UNICODE));
+                }
+
+            } catch (Exception $e) {
+                $this->error($e->getMessage());
+            }
+        }
+
+        return $redis;
     }
 
     /**
@@ -272,32 +321,46 @@ class Controller
         return 0 === strcasecmp($this->controllerName, $controller) && 0 === strcasecmp($this->actionName, $action);
     }
 
-    /**
-     * Parse xml to array, with root key
-     * @param string $xml
-     * @return mixed
-     */
-    protected function xml2array($xml)
-    {
-        $reg = "/<(\w+)[^>]*>([\\x00-\\xFF]*)<\\/\\1>/";
-        if (preg_match_all($reg, $xml, $matches)) {
-            $count = count($matches[0]);
-            for ($i = 0; $i < $count; $i++) {
-                $subxml = $matches[2][$i];
-                $key = $matches[1][$i];
-                if (preg_match($reg, $subxml)) {
-                    $arr[$key] = $this->xml2array($subxml);
-                } else {
-                    $arr[$key] = $subxml;
-                }
-            }
-        }
-        return $arr;
-    }
-
-    protected function outputJSON($status, $content)
+    protected function outputJSON($status, $content = null)
     {
         @header('Content-type: application/json');
-        echo json_encode(array('status'=>$status, 'content'=>$content));
+        echo json_encode(array('status' => $status, 'content' => $content), JSON_UNESCAPED_UNICODE);
+        die();
+    }
+
+    protected function checkEmptyErr($var, $msg)
+    {
+        if (empty($var)) {
+            $this->outputJSON(0, $msg);
+        }
+    }
+
+    protected function dbEscapeString($string)
+    {
+        $string = $this->dbHandler()->quote($string);
+        if ('\'' === substr($string, 0, 1) && '\'' === substr($string, -1)) {
+            $string = substr($string, 1, -1);
+        }
+
+        return $string;
+    }
+
+    protected function getController($name)
+    {
+        static $controllers = [];
+        if (!array_key_exists($name, $controllers)) {
+            $controller = $name . 'Controller';
+            $controllers[$name] = new $controller($this->actionName, $this->config);
+        }
+        return $controllers[$name];
+    }
+
+    protected static function dump($input, $interrupt = true)
+    {
+        header('Content-type: text/html; charset=utf-8');
+        highlight_string("<?php\n ".var_export($input, true));
+        if ($interrupt) {
+            die();
+        }
     }
 }
