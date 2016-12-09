@@ -95,7 +95,7 @@ class MiniFramework
         });
 
         set_error_handler(function ($errNo, $errStr) {
-            ob_end_clean();
+            @ob_end_clean();
             throw new MiniFrameworkException($errStr);
         });
     }
@@ -120,9 +120,10 @@ class MiniFramework
     private function getController()
     {
         if (!$this->Controller) {
-            if (php_sapi_name() == "cli") {
-                if (isset($argv[1])) {
-                    $this->defaultController = $argv[1];
+            if (php_sapi_name() === "cli") {
+                $param = getopt($this->controllerKey.':');
+                if ($param) {
+                    $this->defaultController = $param;
                 }
             } elseif (isset($_GET[$this->controllerKey]) && ($_GET[$this->controllerKey] = trim($_GET[$this->controllerKey]))) {
                 $this->defaultController = $_GET[$this->controllerKey];
@@ -142,9 +143,10 @@ class MiniFramework
      */
     private function getActionName()
     {
-        if (php_sapi_name() == "cli") {
-            if (isset($argv[2])) {
-                $this->defaultAction = $argv[2];
+        if (php_sapi_name() === "cli") {
+            $param = getopt($this->actionKey.':');
+            if ($param) {
+                $this->defaultAction = $param;
             }
         } elseif (isset($_GET[$this->actionKey]) && ($_GET[$this->actionKey] = trim($_GET[$this->actionKey]))) {
             $this->defaultAction = $_GET[$this->actionKey];
@@ -172,7 +174,7 @@ class MiniFramework
         <?= $a ?>
         <?php
         $content = trim(ob_get_contents());
-        ob_end_clean();
+        @ob_end_clean();
         if ($content !== '1') {
             throw new MiniFrameworkException('Please set "short_open_tag = On" in php.ini first.');
         }

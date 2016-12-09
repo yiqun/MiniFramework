@@ -32,7 +32,7 @@ class MiniFrameworkException extends Exception
      */
     private $maxFileSize = 10240;
 
-    public function MiniFrameworkException($message)
+    public function __construct($message = null, $code = 0, Exception $previous = null)
     {
         global $config;
 
@@ -46,6 +46,8 @@ class MiniFrameworkException extends Exception
         if (isset($config['debug']) && $config['debug'] === true) {
             echo $message;
         }
+
+        parent::__construct($message, $config, $previous);
         //die();
     }
 

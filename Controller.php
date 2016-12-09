@@ -46,7 +46,13 @@ class Controller
      */
     protected function getParam($paramName)
     {
-        return isset($_GET[$paramName]) ? $_GET[$paramName] : null;
+        if (php_sapi_name() === "cli") {
+            $value = getopt($paramName.':');
+        } else {
+            $value = isset($_GET[$paramName]) ? $_GET[$paramName] : null;
+        }
+
+        return $value;
     }
 
     /**
