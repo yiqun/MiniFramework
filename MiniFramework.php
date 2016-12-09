@@ -7,7 +7,7 @@
  */
 
 error_reporting(E_ALL);
-require __DIR__.'/MiniFrameworkException.php';
+require __DIR__ . '/MiniFrameworkException.php';
 
 /**
  * Class MiniFramework
@@ -83,7 +83,7 @@ class MiniFramework
 
         spl_autoload_register(function ($class) {
             if ($class === 'Controller') {
-                require __DIR__.'/Controller.php';
+                require __DIR__ . '/Controller.php';
             } elseif ('Controller' === substr($class, -10)) {
                 $fileName = $this->appPath . '/controllers/' . $class . '.php';
                 if (file_exists($fileName)) {
@@ -120,7 +120,11 @@ class MiniFramework
     private function getController()
     {
         if (!$this->Controller) {
-            if (isset($_GET[$this->controllerKey]) && ($_GET[$this->controllerKey] = trim($_GET[$this->controllerKey]))) {
+            if (php_sapi_name() == "cli") {
+                if (isset($argv[1])) {
+                    $this->defaultController = $argv[1];
+                }
+            } elseif (isset($_GET[$this->controllerKey]) && ($_GET[$this->controllerKey] = trim($_GET[$this->controllerKey]))) {
                 $this->defaultController = $_GET[$this->controllerKey];
             }
 
@@ -138,7 +142,11 @@ class MiniFramework
      */
     private function getActionName()
     {
-        if (isset($_GET[$this->actionKey]) && ($_GET[$this->actionKey] = trim($_GET[$this->actionKey]))) {
+        if (php_sapi_name() == "cli") {
+            if (isset($argv[2])) {
+                $this->defaultAction = $argv[2];
+            }
+        } elseif (isset($_GET[$this->actionKey]) && ($_GET[$this->actionKey] = trim($_GET[$this->actionKey]))) {
             $this->defaultAction = $_GET[$this->actionKey];
         }
 
@@ -180,5 +188,5 @@ unset($traces);
 $dirname = dirname($trace['file']);
 $config = require $dirname . '/configs/main.php';
 $App = new MiniFramework($dirname, $config);
-unset($config, $dirname,$trace);
+unset($config, $dirname, $trace);
 $App->run();
