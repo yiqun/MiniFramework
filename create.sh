@@ -19,6 +19,8 @@ require '{$frameworkPath}MiniFramework.php';
 EOF;
 
 file_put_contents($path.'index.php', $indexFileContent);
+file_put_contents($path.'index.sh', "#!/bin/bash\n".$indexFileContent);
+chmod($path.'index.sh', 0755);
 
 // Main config
 $mainConfigContent = <<<EOF
