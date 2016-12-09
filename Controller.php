@@ -335,13 +335,17 @@ class Controller
 
     /**
      * Throw error
-     * @param $msg
+     * @param string $msg
      */
     protected function error($msg)
     {
         throw new MiniFrameworkException($msg);
     }
 
+    /**
+     * Get current app base url
+     * @return null|string
+     */
     protected function getBaseUrl()
     {
         static $baseUrl = null;
@@ -359,11 +363,22 @@ class Controller
         return $baseUrl;
     }
 
+    /**
+     * Check current controller if
+     * @param string $controller
+     * @param string $action
+     * @return bool
+     */
     protected function isCurrentRequest($controller, $action)
     {
         return 0 === strcasecmp($this->controllerName, $controller) && 0 === strcasecmp($this->actionName, $action);
     }
 
+    /**
+     * Output json string
+     * @param string $status
+     * @param null $content
+     */
     protected function outputJSON($status, $content = null)
     {
         @header('Content-type: application/json');
@@ -371,6 +386,11 @@ class Controller
         die();
     }
 
+    /**
+     * Check variable value, output error if empty
+     * @param mixed $var
+     * @param string $msg
+     */
     protected function checkEmptyErr($var, $msg)
     {
         if (empty($var)) {
@@ -378,6 +398,11 @@ class Controller
         }
     }
 
+    /**
+     * Escape sql string
+     * @param string $string
+     * @return string
+     */
     protected function dbEscapeString($string)
     {
         $string = $this->dbHandler()->quote($string);
@@ -388,6 +413,11 @@ class Controller
         return $string;
     }
 
+    /**
+     * Get Controller object via controller name
+     * @param string $name
+     * @return mixed
+     */
     protected function getController($name)
     {
         static $controllers = [];
@@ -398,6 +428,11 @@ class Controller
         return $controllers[$name];
     }
 
+    /**
+     * Dump variable to page
+     * @param string $input
+     * @param bool $interrupt
+     */
     protected static function dump($input, $interrupt = true)
     {
         header('Content-type: text/html; charset=utf-8');
