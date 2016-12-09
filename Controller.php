@@ -15,6 +15,7 @@ class Controller
     protected $controllerName;
     protected $layout;
     protected $title;
+    private $dbTransactionBegan;
 
     /**
      * Controller constructor.
@@ -147,6 +148,9 @@ class Controller
             }
 
             try {
+                if (!array_key_exists('type', $this->config['db'])) {
+                    $this->config['db']['type'] = 'mysql';
+                }
                 if (!array_key_exists('port', $this->config['db'])) {
                     $this->config['db']['port'] = '3306';
                 }
@@ -154,7 +158,7 @@ class Controller
                 if ($persistent) {
                     $attrs[PDO::ATTR_PERSISTENT] = true;
                 }
-                $db = new PDO("mysql:host={$this->config['db']['host']};"
+                $db = new PDO("{$this->config['db']['type']}:host={$this->config['db']['host']};"
                     . "port={$this->config['db']['port']};"
                     . "dbname={$this->config['db']['name']};"
                     . 'charset=utf8;', $this->config['db']['user'], $this->config['db']['pass']
@@ -172,6 +176,39 @@ class Controller
         }
 
         return $db;
+    }
+
+    /**
+     * Begin transaction
+     */
+    protected function dbBeginTransaction()
+    {
+        if (!$this->dbTransactionBegan) {
+            $this->dbHandler()->beginTransaction();
+            $this->dbTransactionBegan = true;
+        }
+    }
+
+    /**
+     * Commit database changes
+     */
+    protected function dbCommit()
+    {
+        if ($this->dbTransactionBegan) {
+            $this->dbHandler()->commit();
+            $this->dbTransactionBegan = false;
+        }
+    }
+
+    /**
+     * Rollback database
+     */
+    protected function dbRollback()
+    {
+        if ($this->dbTransactionBegan) {
+            $this->dbHandler()->rollBack();
+            $this->dbTransactionBegan = false;
+        }
     }
 
     /**

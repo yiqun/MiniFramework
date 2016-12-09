@@ -57,7 +57,7 @@ class MiniFrameworkException extends Exception
      */
     private function processLog($log)
     {
-        $text = array(date('[Y-m-d H:i:s]') . ' ' . $log . PHP_EOL . 'Stack trace:');
+        $text = [date('[Y-m-d H:i:s]') . ' ' . $log . PHP_EOL . 'Stack trace:'];
         $traces = debug_backtrace();
         array_splice($traces, 1, 1);
         foreach ($traces as $index => $trace) {
@@ -122,7 +122,7 @@ class MiniFrameworkException extends Exception
      */
     private function multiImplode($array)
     {
-        $ret = array();
+        $ret = [];
 
         foreach ($array as $item) {
             if (is_array($item)) {

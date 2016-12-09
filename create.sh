@@ -31,10 +31,11 @@ $mainConfigContent = <<<EOF
  * @license http://www.x-omni.com/license/
  */
 
-return array(
+return [
     'appName' => 'My Application',
     /**
      * [
+     * - type
      * - host
      * - port
      * - name
@@ -45,7 +46,7 @@ return array(
     //'db' => require __DIR__.'/db.php',
     'layout' => 'main',
     'debug' => true
-);
+];
 EOF;
 
 file_put_contents($path.'configs/main.php', $mainConfigContent);
@@ -53,9 +54,9 @@ file_put_contents($path.'configs/main.php', $mainConfigContent);
 // Main layout
 $mainLayoutContent = <<<EOF
 <?php
-\$pageMenuList = array(
-    array('name' => 'My Application', 'controller' => 'index', 'action' => 'index'),
-);
+\$pageMenuList = [
+    ['name' => 'My Application', 'controller' => 'index', 'action' => 'index'],
+];
 ?>
 <!doctype html>
 <html lang="zh-CN" xml:lang="zh-CN">
@@ -131,7 +132,7 @@ class IndexController extends Controller
 {
     public function actionIndex()
     {
-        \$this->render('index', array('text' => 'Welcome to My Application!'));
+        \$this->render('index', ['text' => 'Welcome to My Application!']);
     }
 }
 EOF;
