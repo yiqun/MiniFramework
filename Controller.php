@@ -48,7 +48,7 @@ class Controller
     protected function getParam($paramName)
     {
         if (php_sapi_name() === "cli") {
-            $value = getopt($paramName.':');
+            $value = getopt($paramName . ':');
         } else {
             $value = isset($_GET[$paramName]) ? $_GET[$paramName] : null;
         }
@@ -83,6 +83,15 @@ class Controller
             (is_array($POST) && array_key_exists($postName, $POST) ? $POST[$postName] : null);
     }
 
+    protected function requestType()
+    {
+        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
+            return 'ajax';
+        }
+
+        return strtolower($_SERVER['REQUEST_METHOD']);
+    }
+
     /**
      * Query sql string
      * @param $sql
@@ -95,9 +104,14 @@ class Controller
             $error = $this->dbHandler()->errorInfo();
             $this->error('Error:' . $error[0] . $error[1] . '. Statement error is: ' . $error[2]);
         }
-        $stmt->execute();
-        $error = $stmt->errorInfo();
-        if ($error[0] !== '00000') {
+        try {
+            $stmt->execute();
+            $error = $stmt->errorInfo();
+        } catch (Exception $e) {
+            $error = $e->errorInfo;
+        }
+
+        if (is_array($error) && array_key_exists(0, $error) && $error[0] !== '00000') {
             $this->error('Error-code:' . $error[0] . '-' . $error[1] . '. Statement error is: ' . $error[2]);
         }
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -115,9 +129,14 @@ class Controller
             $error = $this->dbHandler()->errorInfo();
             $this->error('Error:' . $error[0] . $error[1] . '. Statement error is: ' . $error[2]);
         }
-        $res = $stmt->execute();
-        $error = $stmt->errorInfo();
-        if ($error[0] !== '00000') {
+        try {
+            $res = $stmt->execute();
+            $error = $stmt->errorInfo();
+        } catch (Exception $e) {
+            $error = $e->errorInfo;
+        }
+
+        if (is_array($error) && array_key_exists(0, $error) && $error[0] !== '00000') {
             $this->error('Error-code:' . $error[0] . '-' . $error[1] . '. Statement error is: ' . $error[2]);
         }
         if (stripos($sql, 'INSERT') === 0) {
@@ -168,8 +187,8 @@ class Controller
                     $this->error('数据库连接失败:' . json_encode($this->config['db'], JSON_UNESCAPED_UNICODE));
                 }
 
-                $stmt = $db->prepare("SET names utf8");
-                $stmt->execute();
+                $db->prepare("SET names utf8")->execute();
+                //$db->prepare("SET autocommit = 1")->execute();
             } catch (Exception $e) {
                 $this->error($e->getMessage());
             }
@@ -235,7 +254,9 @@ class Controller
 
                 $redis = new Redis();
                 if ($persistent) {
+                    ini_set('default_socket_timeout', -1);
                     $redis->pconnect($this->config['redis']['host'], $this->config['redis']['port']);
+                    $redis->setOption(Redis::OPT_READ_TIMEOUT, -1);
                 } else {
                     $redis->connect($this->config['redis']['host'], $this->config['redis']['port'], 3);
                 }
@@ -287,6 +308,18 @@ class Controller
             @flock($fp, LOCK_UN);
             @fclose($fp);
         }
+    }
+
+    /**
+     * Get query limit params
+     * @return array
+     */
+    protected function getRecordLimit()
+    {
+        $size = (int)max(1, (int)($this->getParam('pageSize') ? $this->getParam('pageSize') : $this->config['pageSize']));
+        $index = ((int)max(1, (int)$this->getParam('page')) - 1) * $size;
+
+        return [$index, $size];
     }
 
     /**
@@ -371,7 +404,8 @@ class Controller
      */
     protected function isCurrentRequest($controller, $action)
     {
-        return 0 === strcasecmp($this->controllerName, $controller) && 0 === strcasecmp($this->actionName, $action);
+        return 0 === strcasecmp($this->controllerName, $controller) && (!$action || 0 === strcasecmp($this->actionName,
+                $action));
     }
 
     /**
@@ -436,9 +470,49 @@ class Controller
     protected static function dump($input, $interrupt = true)
     {
         header('Content-type: text/html; charset=utf-8');
-        highlight_string("<?php\n ".var_export($input, true));
+        highlight_string("<?php\n " . var_export($input, true));
         if ($interrupt) {
             die();
         }
     }
+
+    public function actionUpload()
+    {
+        if (!empty($_FILES['img'])) {
+            if (!is_array($_FILES['img']['name'])) {
+                $_FILES['img']['name'] = array($_FILES['img']['name']);
+                $_FILES['img']['tmp_name'] = array($_FILES['img']['tmp_name']);
+            }
+            $len = count($_FILES['img']['name']);
+
+            $exts = array();
+            $dir = $this->config['uploadPath'].'/'.date('Ymd');
+            if (!is_dir($dir)) {
+                self::makeDir($dir);
+            }
+            for ($i = 0; $i < $len; $i++) {
+                $name = $_FILES['img']['name'][$i];
+                $tmp = $_FILES['img']['tmp_name'][$i];
+                $ext = substr($name, strrpos($name, '.') + 1);
+                $newFile = "$dir/{$this->getPost('uuid')}" . ($len > 1 ? "-{$i}" : '') . ".{$ext}";
+                if (!move_uploaded_file($tmp, $newFile)) {
+                    echo "<script>parent.imgUploader.exception('图片大小超过 2M','{$this->getPost('uuid')}')</script>";
+                    die();
+                }
+                $imgSize = getimagesize($newFile);
+                $exts[] = $ext;
+            }
+            $imgRelativeDir = '';
+            echo "<script>parent.imgUploader.afterupload('{$this->getPost('uuid')}'," . json_encode($exts) . ",
+            '$imgRelativeDir')
+            </script>";
+        }
+    }
+
+    public static function makeDir($dir, $mode = 0755)
+    {
+        return empty($dir) || is_dir($dir) || self::makeDir(dirname($dir), $mode) && mkdir($dir, $mode);
+    }
+
+
 }

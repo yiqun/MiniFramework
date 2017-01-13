@@ -22,6 +22,8 @@ file_put_contents($path.'index.php', $indexFileContent);
 file_put_contents($path.'index.sh', "#!/bin/bash\n".$indexFileContent);
 chmod($path.'index.sh', 0755);
 
+$appToken = md5(uniqid($path, true));
+
 // Main config
 $mainConfigContent = <<<EOF
 <?php
@@ -33,6 +35,8 @@ $mainConfigContent = <<<EOF
 
 return [
     'appName' => 'My Application',
+    'appToken' => '{$appToken}',
+    'pageSize' => 20,
     /**
      * [
      * - type
@@ -45,6 +49,7 @@ return [
      */
     //'db' => require __DIR__.'/db.php',
     'layout' => 'main',
+    'uploadPath' => 'assets/uploads',
     'debug' => true
 ];
 EOF;
@@ -69,8 +74,9 @@ $mainLayoutContent = <<<EOF
     <link rel="stylesheet" href="<?= \$this->getBaseUrl() ?>/assets/todc-bootstrap/css/todc-bootstrap.min.css">
     <link rel="stylesheet" href="<?= \$this->getBaseUrl() ?>/assets/ionicons-2.0.1/css/ionicons.min.css">
     <script src="<?= \$this->getBaseUrl() ?>/assets/js/jquery-1.12.4.min.js"></script>
+    <script src="<?= \$this->getBaseUrl() ?>/assets/js/public.js"></script>
     <script src="<?= \$this->getBaseUrl() ?>/assets/todc-bootstrap/js/bootstrap.min.js"></script>
-    <script src="<?= \$this->getBaseUrl() ?>/assets/layer.js"></script>
+    <script src="<?= \$this->getBaseUrl() ?>/assets/layer/layer.js"></script>
 </head>
 <body>
 <div class="container">
@@ -84,16 +90,22 @@ $mainLayoutContent = <<<EOF
                     <span class="icon-bar"></span>
                     <span class="icon-bar"></span>
                 </button>
-                <a href="#" class="navbar-brand dropdown-toggle"
-                   data-toggle="dropdown"><?= \$this->config['appName'] ?> <span
-                        class="caret"></span></a>
+                <a href="#" class="navbar-brand dropdown-toggle" data-toggle="dropdown"><?= \$this->config['appName'] ?>
+                    <?php if (\$pageMenuList) {?>
+                        <span class="caret"></span>
+                    <?php }?>
+                </a>
+                <?php if (\$pageMenuList) {?>
                 <ul class="dropdown-menu">
                     <?php foreach (\$pageMenuList as \$ml) { ?>
-                        <li<?= \$this->isCurrentRequest(\$ml['controller'], \$ml['action']) ? ' class="active"' : '' ?>><a
-                                href="<?= \$this->getBaseUrl() ?>/?_c_=<?= \$ml['controller'] ?>&_a_=<?= \$ml['action'] ?>"><?= \$ml['name'] ?></a>
+                        <li<?= \$this->isCurrentRequest(\$ml['controller'], \$ml['action']) ? ' class="active"' : '' ?>>
+                            <a href="<?= \$this->getBaseUrl() ?>/?_c_=<?= \$ml['controller'] ?>&_a_=<?= \$ml['action'] ?>">
+                                <?= \$ml['name'] ?>
+                            </a>
                         </li>
                     <?php } ?>
                 </ul>
+                <?php }?>
             </div>
 
             <div class="collapse navbar-collapse">

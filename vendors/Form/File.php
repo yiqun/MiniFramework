@@ -4,63 +4,98 @@
  * Description of File
  *
  * @author riekiquan
- * @property boolean $autoUpload
+ * @property string $autoUpload
+ * @property string $autoUploadCallback
  * @property boolean $multiple
+ * @property string $accept
  */
-class File extends FormElementCommon {
+class File extends FormElementCommon
+{
 
-  private $autoUpload = FALSE,
-    $multiple = FALSE;
+    private $autoUpload = NULL,
+        $autoUploadCallback = NULL,
+        $accept = NULL,
+        $multiple = FALSE;
 
-  public function __set($name, $value)
-  {
-    if (in_array($name, array('autoUpload', 'multiple'))) {
-      $this->$name = $value;
-    } else {
-      parent::__set($name, $value);
-    }
-  }
-
-  /**
-   * Render element
-   *
-   * @return array(html, script)
-   */
-  public function render()
-  {
-    $id = $this->getId();
-
-    $html = "<label>{$this->getLabel()}";
-    $html .= "<input type=\"file\"";
-    $html .= " data-form-role=\"element\"";
-    $html .= " id=\"{$id}\"";
-    $html .= " data-helper=\"" . htmlentities($this->helper) . "\"";
-    $html .= " class=\"{$this->getClass()}\"";
-
-    if (TRUE === $this->isDisabled) {
-      $html .= " disabled";
+    public function __set($name, $value)
+    {
+        if (in_array($name, array('autoUpload', 'autoUploadCallback', 'accept', 'multiple'))) {
+            $this->$name = $value;
+        } else {
+            parent::__set($name, $value);
+        }
     }
 
-    $rules = $this->getRules();
-    if ($rules) {
-      $rules = htmlentities(json_encode($rules));
-      $html .= " data-rules=\"$rules\"";
-    }
+    /**
+     * Render element
+     *
+     * @return array(html, script)
+     */
+    public function render()
+    {
+        $id = $this->getId();
 
-    if (TRUE === $this->multiple) {
-      $html .= " multiple=\"multiple\"";
-    }
+        $html = "<input type=\"hidden\"";
+        $html .= " name=\"{$this->name}\"";
+        $html .= " data-form-role=\"element\"";
+        $html .= " id=\"{$id}\"";
+        $html .= ">";
 
-    $html .= '></label>';
+        $html .= "<label>{$this->getLabel()}</label>";
+        $html .= "<input type=\"file\"";
+        $html .= " id=\"{$id}-file\"";
+        //$html .= " data-helper=\"" . htmlentities($this->helper) . "\"";
+        $html .= " class=\"{$this->getClass()}\"";
 
-    $html .= "<p class=\"help-block\">{$this->helper}</p>";
+        if (TRUE === $this->isDisabled) {
+            $html .= " disabled";
+        }
 
-    $autoUploadScript = '';
-    if (TRUE === $this->autoUpload) {
-      $autoUploadScript = "$('#{$id}').bind('change',function(){\$(this).closest('form').submit();});";
-    }
+        if (NULL !== $this->accept) {
+            $html .= " accept=\"{$this->accept}\"";
+        }
 
-    $script = <<<EOF
+        $rules = $this->getRules();
+        if ($rules) {
+            $rules = htmlentities(json_encode($rules));
+            $html .= " data-rules=\"$rules\"";
+        }
+
+        if (TRUE === $this->multiple) {
+            $html .= " multiple=\"multiple\"";
+        }
+
+        $html .= '>';
+
+        $html .= "<p class=\"help-block\">{$this->helper}</p>";
+
+        $autoUploadScript = '';
+        if (NULL !== $this->autoUpload) {
+            $autoUploadScript = <<<EOF
+$('#{$id}-file').bind('change',function(){
+    var fd = new FormData(), f = $(this)[0].files[0];
+    fd.append('file', f.name);
+    fd.append('type', f.type);
+    fd.append('data', f.slice(0, f.size));
+    $.ajax({
+        type: 'POST',
+        url: '{$this->autoUpload}',
+        data: fd,
+        processData: false,
+        contentType: false
+    }).done(function(res) {
+        if (res.status) {
+            $('#{$id}').val(res.content);
+        } else {
+            $('#{$id}').val('');
+        }
+        {$this->autoUploadCallback}(res);
+    });
+});
+EOF;
+        }
+
+        $script = <<<EOF
 {$autoUploadScript}
 {$this->getInitCallback()}
 W.FormElementGetDataFns = $.extend(W.FormElementGetDataFns, {"{$id}": function(){
@@ -68,7 +103,7 @@ W.FormElementGetDataFns = $.extend(W.FormElementGetDataFns, {"{$id}": function()
 }});
 EOF;
 
-    return array($html, $script);
-  }
+        return array($html, $script);
+    }
 
 }
