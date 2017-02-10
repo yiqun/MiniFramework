@@ -328,7 +328,7 @@ class Controller
      * @param null $pageData
      * @param null $layoutFileBaseName
      */
-    protected function render($templateFileBaseName, $pageData = null, $layoutFileBaseName = null)
+    protected function render($templateFileBaseName, $pageData = null, $layoutFileBaseName = null, $exit = true)
     {
         if (false === strpos($templateFileBaseName, '/')) {
             $templateFileBaseName = strtolower($this->controllerName) . '/' . $templateFileBaseName;
@@ -361,9 +361,45 @@ class Controller
             ob_end_clean();
         }
 
-        echo $content;
+        if ($exit) {
+            echo $content;
+            die();
+        } else {
+            return $content;
+        }
+    }
 
-        die();
+    /**
+     * Render page without layout
+     * @param string $templateFileBaseName
+     * @param null $pageData
+     * @param null $layoutFileBaseName
+     */
+    protected function renderWithoutLayout($templateFileBaseName, $pageData = null, $exit = true)
+    {
+        if (false === strpos($templateFileBaseName, '/')) {
+            $templateFileBaseName = strtolower($this->controllerName) . '/' . $templateFileBaseName;
+        }
+        $templateFileBaseName = 'templates/' . $templateFileBaseName . '.php';
+        if (!file_exists($templateFileBaseName)) {
+            throw new MiniFrameworkException('模板[' . $templateFileBaseName . ']不存在');
+        }
+
+        if ($pageData) {
+            extract($pageData, EXTR_OVERWRITE);
+        }
+
+        ob_start();
+        include $templateFileBaseName;
+        $content = ob_get_contents();
+        ob_end_clean();
+
+        if ($exit) {
+            echo $content;
+            die();
+        } else {
+            return $content;
+        }
     }
 
     /**
@@ -486,7 +522,7 @@ class Controller
             $len = count($_FILES['img']['name']);
 
             $exts = array();
-            $dir = $this->config['uploadPath'].'/'.date('Ymd');
+            $dir = $this->config['uploadPath'] . '/' . date('Ymd');
             if (!is_dir($dir)) {
                 self::makeDir($dir);
             }
