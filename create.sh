@@ -16,6 +16,9 @@ $indexFileContent = <<<EOF
  */
 
 require '{$frameworkPath}MiniFramework.php';
+$config = require __DIR__.'/configs/main.php';
+$MF = new MiniFramework($config);
+$MF->run();
 EOF;
 
 file_put_contents($path.'index.php', $indexFileContent);
