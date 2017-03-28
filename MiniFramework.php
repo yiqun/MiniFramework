@@ -54,7 +54,7 @@ class MiniFramework
      * App constructor.
      * @param $config
      */
-    public function __construct($appPath, $config)
+    public function __construct($config, $appPath = null)
     {
         $this->checkShortOpenTagSupport();
 
@@ -79,7 +79,7 @@ class MiniFramework
             $this->config = $config;
         }
 
-        $this->appPath = $appPath;
+        $this->appPath = $this->getAppPath($appPath);
 
         spl_autoload_register(function ($class) {
             if ($class === 'Controller') {
@@ -179,16 +179,27 @@ class MiniFramework
             throw new MiniFrameworkException('Please set "short_open_tag = On" in php.ini first.');
         }
     }
+
+    private function getAppPath($appPath = null)
+    {
+        if ($appPath) {
+            return $appPath;
+        }
+        $traces = debug_backtrace();
+        $trace = array_pop($traces);
+        $dirname = dirname($trace['file']);
+        return $dirname;
+    }
 }
 
 /**
  * Run scripts
  */
-$traces = debug_backtrace();
-$trace = array_pop($traces);
-unset($traces);
-$dirname = dirname($trace['file']);
-$config = require $dirname . '/configs/main.php';
-$App = new MiniFramework($dirname, $config);
-unset($config, $dirname, $trace);
-$App->run();
+//$traces = debug_backtrace();
+//$trace = array_pop($traces);
+//unset($traces);
+//$dirname = dirname($trace['file']);
+//$config = require $dirname . '/configs/main.php';
+//$App = new MiniFramework($dirname, $config);
+//unset($config, $dirname, $trace);
+//$App->run();

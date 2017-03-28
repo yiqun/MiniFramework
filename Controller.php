@@ -22,11 +22,11 @@ class Controller
      * @param $controllerName
      * @param $config
      */
-    public function __construct($controllerName, $config)
+    public function __construct($controllerName, $config = array())
     {
         $this->controllerName = $controllerName;
         $this->config = $config;
-        if (array_key_exists('layout', $this->config)) {
+        if ($config && array_key_exists('layout', $this->config)) {
             $this->layout = $this->config['layout'];
             unset($this->config['layout']);
         }
@@ -63,22 +63,22 @@ class Controller
      */
     protected function getPost($postName = null)
     {
-        static $POST = NULL;
-        if ($POST === NULL) {
-            if ($_POST) {
-                $POST = $_POST;
-            } else {
-                $POST = file_get_contents('php://input');
-                if ($POST) {
-                    // If is json format
-                    if (is_string($POST) && 0 === strpos($POST, '{') && '}' === substr($POST, -1)) {
-                        $POST = json_decode($POST, TRUE);
-                    }
-                } else {
-                    $POST = array();
+        //static $POST = NULL;
+        //if ($POST === NULL) {
+        if ($_POST) {
+            $POST = $_POST;
+        } else {
+            $POST = file_get_contents('php://input');
+            if ($POST) {
+                // If is json format
+                if (is_string($POST) && 0 === strpos($POST, '{') && '}' === substr($POST, -1)) {
+                    $POST = json_decode($POST, TRUE);
                 }
+            } else {
+                $POST = array();
             }
         }
+        //}
         return is_string($POST) ? $POST :
             (is_array($POST) && array_key_exists($postName, $POST) ? $POST[$postName] : null);
     }
@@ -369,6 +369,17 @@ class Controller
         }
     }
 
+    protected function end($output = null)
+    {
+        die($output);
+    }
+
+    protected function redirect($url, $code = 302)
+    {
+        header('Location:' . $url, true, $code);
+        $this->end();
+    }
+
     /**
      * Render page without layout
      * @param string $templateFileBaseName
@@ -441,7 +452,7 @@ class Controller
     protected function isCurrentRequest($controller, $action)
     {
         return 0 === strcasecmp($this->controllerName, $controller) && (!$action || 0 === strcasecmp($this->actionName,
-                $action));
+                    $action));
     }
 
     /**
@@ -453,7 +464,7 @@ class Controller
     {
         @header('Content-type: application/json');
         echo json_encode(array('status' => $status, 'content' => $content), JSON_UNESCAPED_UNICODE);
-        die();
+        $this->end();
     }
 
     /**
@@ -550,5 +561,18 @@ class Controller
         return empty($dir) || is_dir($dir) || self::makeDir(dirname($dir), $mode) && mkdir($dir, $mode);
     }
 
+    public static function safe_url_encode($str) // URLSafeBase64Encode
+    {
+        $find = array('+', '/');
+        $replace = array('-', '_');
+        return str_replace($find, $replace, base64_encode($str));
+    }
+
+    public static function safe_url_decode($str)
+    {
+        $find = array('-', '_');
+        $replace = array('+', '/');
+        return base64_decode(str_replace($find, $replace, $str));
+    }
 
 }
