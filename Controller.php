@@ -106,12 +106,15 @@ class Controller
         }
         try {
             $stmt->execute();
-            $error = $stmt->errorInfo();
         } catch (Exception $e) {
-            $error = $e->errorInfo;
+            $error = $stmt->errorInfo();
         }
 
-        if (is_array($error) && array_key_exists(0, $error) && $error[0] !== '00000') {
+        if (isset($error) && is_array($error) && array_key_exists(0, $error) && $error[0] !== '00000') {
+            if ($error[1] == 2006) {
+                $this->dbHandler(false ,true);
+                return $this->dbQuery($sql);
+            }
             $this->error('Error-code:' . $error[0] . '-' . $error[1] . '. Statement error is: ' . $error[2]);
         }
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -131,12 +134,15 @@ class Controller
         }
         try {
             $res = $stmt->execute();
-            $error = $stmt->errorInfo();
         } catch (Exception $e) {
-            $error = $e->errorInfo;
+            $error = $stmt->errorInfo();
         }
 
-        if (is_array($error) && array_key_exists(0, $error) && $error[0] !== '00000') {
+        if (isset($error) && is_array($error) && array_key_exists(0, $error) && $error[0] !== '00000') {
+            if ($error[1] == 2006) {
+                $this->dbHandler(false ,true);
+                return $this->dbExecute($sql);
+            }
             $this->error('Error-code:' . $error[0] . '-' . $error[1] . '. Statement error is: ' . $error[2]);
         }
         if (stripos($sql, 'INSERT') === 0) {
@@ -152,12 +158,13 @@ class Controller
     /**
      * DB handler
      * @param boolean $persistent default false, work only first time
+     * @param boolean $reconnect
      * @return PDO
      */
-    private function dbHandler($persistent = false)
+    private function dbHandler($persistent = false, $reconnect = false)
     {
         static $db;
-        if (!$db) {
+        if (!$db || $reconnect) {
             if (!is_array($this->config) || !array_key_exists('db', $this->config) || !is_array($this->config['db'])
                 || !array_key_exists('host', $this->config['db']) || !$this->config['db']['host']
                 || !array_key_exists('name', $this->config['db']) || !$this->config['db']['name']
