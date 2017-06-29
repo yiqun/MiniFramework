@@ -89,7 +89,7 @@ class Controller
             return 'ajax';
         }
 
-        return empty($_SERVER['REQUEST_METHOD'])? strtolower($_SERVER['REQUEST_METHOD']): 'get';
+        return !empty($_SERVER['REQUEST_METHOD'])? strtolower($_SERVER['REQUEST_METHOD']): 'get';
     }
 
     /**
